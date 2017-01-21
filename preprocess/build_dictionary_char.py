@@ -15,7 +15,7 @@ def main(filename, short_list, src):
 
         for number, line in enumerate(f):
 
-            if number % 20000 == 0:
+            if number % 100000 == 0:
                 print 'line', number
 
             words_in = line.strip()

@@ -6,7 +6,7 @@ import time
 reload(sys)
 sys.setdefaultencoding('utf-8')
 
-sys.path.insert(0, "/misc/kcgscratch1/ChoGroup/jasonlee/dl4mt-c2c/char2char") # change appropriately
+sys.path.insert(0, "/home/jrthom18/data/dl4mt-c2c/char2char") # change appropriately
 
 import numpy
 import cPickle as pkl
@@ -185,7 +185,7 @@ if __name__ == "__main__":
     else:
         which_wmt = "wmt15"
 
-    data_path = "/misc/kcgscratch1/ChoGroup/jasonlee/temp_data/%s/" % which_wmt # change appropriately
+    data_path = "/home/jrthom18/data/dl4mt-c2c/data" # change appropriately
 
     if args.which not in "dev test1 test2".split():
         raise Exception('1')
@@ -216,8 +216,8 @@ if __name__ == "__main__":
 
     char_base = args.model.split("/")[-1]
 
-    dictionary = data_path + dictionary
-    dictionary_target = data_path + dictionary_target
+    dictionary = data_path + "train.enc.2.pkl"          # change appropriately
+    dictionary_target = data_path + "train.dec.2.pkl"   # change appropriately
     source = data_path + source
 
     if args.source != "":

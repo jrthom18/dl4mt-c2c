@@ -11,13 +11,14 @@ from prepare_data import *
 
 def main(job_id, args):
     save_file_name = args.model_name
-    source_dataset = args.data_path + wmts[args.translate]['train'][0][0]
-    target_dataset = args.data_path + wmts[args.translate]['train'][0][1]
-    valid_source_dataset = args.data_path + wmts[args.translate]['dev'][0][0]
-    valid_target_dataset = args.data_path + wmts[args.translate]['dev'][0][1]
-    source_dictionary = args.data_path + wmts[args.translate]['dic'][0][0]
-    target_dictionary = args.data_path + wmts[args.translate]['dic'][0][1]
 
+    source_dataset = args.data_path + "train.enc"
+    target_dataset = args.data_path + "train.dec"
+    valid_source_dataset = args.data_path + "test.enc"
+    valid_target_dataset = args.data_path + "test.dec"
+    source_dictionary = args.data_path + "train.enc.2.pkl"
+    target_dictionary = args.data_path + "train.dec.2.pkl"
+    
     print args.model_path, save_file_name
     print source_dataset
     print target_dataset
@@ -123,8 +124,8 @@ if __name__ == '__main__':
     parser.add_argument('-patience', type=int, default=-1, help="")
     parser.add_argument('-learning_rate', type=float, default=0.0001, help="")
 
-    parser.add_argument('-n_words_src', type=int, default=304, help="298 for FI-EN")
-    parser.add_argument('-n_words', type=int, default=302, help="292 for FI-EN")
+    parser.add_argument('-n_words_src', type=int, default=2, help="298 for FI-EN")
+    parser.add_argument('-n_words', type=int, default=2, help="292 for FI-EN")
 
     parser.add_argument('-optimizer', type=str, default="adam", help="")
     parser.add_argument('-decay_c', type=int, default=0, help="")
@@ -142,21 +143,22 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    if args.translate == "fi_en":
-        args.n_words_src = 304
-        args.n_words = 302
+    #if args.translate == "fi_en":
+    #    args.n_words_src = 304
+    #    args.n_words = 302
 
-    if args.translate not in "de_en cs_en fi_en ru_en".split():
-        raise Exception('1')
+    #if args.translate not in "de_en cs_en fi_en ru_en".split():
+    #    raise Exception('1')
 
     args.model_name = "bi-char2char"
 
     args.conv_width = [ int(x) for x in args.conv_width.split("-") ]
     args.conv_nkernels = [ int(x) for x in args.conv_nkernels.split("-") ]
 
-    args.model_path = "/misc/kcgscratch1/ChoGroup/jasonlee/dl4mt-c2c/models/" # change accordingly
-    args.data_path = "/misc/kcgscratch1/ChoGroup/jasonlee/temp_data/wmt15/" # change accordingly
-    args.model_path = args.model_path + args.translate + "/"
+    args.model_path = "/home/jrthom18/data/dl4mt-c2c/models" # change accordingly
+    args.data_path = "/home/jrthom18/data/dl4mt-c2c/data" # change accordingly
+    
+    #args.model_path = args.model_path + args.translate + "/"
 
     print "Model path:", args.model_path
 
