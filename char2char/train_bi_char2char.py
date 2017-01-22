@@ -16,8 +16,8 @@ def main(job_id, args):
     target_dataset = args.data_path + "train.dec"
     valid_source_dataset = args.data_path + "test.enc"
     valid_target_dataset = args.data_path + "test.dec"
-    source_dictionary = args.data_path + "train.enc.2.pkl"
-    target_dictionary = args.data_path + "train.dec.2.pkl"
+    source_dictionary = args.data_path + "train.enc.pkl"
+    target_dictionary = args.data_path + "train.dec.pkl"
     
     print args.model_path, save_file_name
     print source_dataset
@@ -124,8 +124,8 @@ if __name__ == '__main__':
     parser.add_argument('-patience', type=int, default=-1, help="")
     parser.add_argument('-learning_rate', type=float, default=0.0001, help="")
 
-    parser.add_argument('-n_words_src', type=int, default=2, help="298 for FI-EN")
-    parser.add_argument('-n_words', type=int, default=2, help="292 for FI-EN")
+    parser.add_argument('-n_words_src', type=int, default=838, help="298 for FI-EN")
+    parser.add_argument('-n_words', type=int, default=468, help="292 for FI-EN")
 
     parser.add_argument('-optimizer', type=str, default="adam", help="")
     parser.add_argument('-decay_c', type=int, default=0, help="")
@@ -155,8 +155,8 @@ if __name__ == '__main__':
     args.conv_width = [ int(x) for x in args.conv_width.split("-") ]
     args.conv_nkernels = [ int(x) for x in args.conv_nkernels.split("-") ]
 
-    args.model_path = "/home/jrthom18/data/dl4mt-c2c/models" # change accordingly
-    args.data_path = "/home/jrthom18/data/dl4mt-c2c/data" # change accordingly
+    args.model_path = "/home/jrthom18/data/dl4mt-c2c/models/" # change accordingly
+    args.data_path = "/home/jrthom18/data/dl4mt-c2c/data/" # change accordingly
     
     #args.model_path = args.model_path + args.translate + "/"
 

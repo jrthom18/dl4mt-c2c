@@ -60,7 +60,6 @@ def main(filename, short_list, src):
             worddict[ww] = ii + len(tokens)
 
     print 'start dump'
-    with open('%s.%d.pkl' % (filename, short_list+len(tokens)), 'wb') as f:
         pkl.dump(worddict, f)
 
     f.close()
