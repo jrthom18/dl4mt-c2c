@@ -12,12 +12,12 @@ from prepare_data import *
 def main(job_id, args):
     save_file_name = args.model_name
 
-    source_dataset = args.data_path + "train.enc"
-    target_dataset = args.data_path + "train.dec"
-    valid_source_dataset = args.data_path + "test.enc"
-    valid_target_dataset = args.data_path + "test.dec"
-    source_dictionary = args.data_path + "train.enc.pkl"
-    target_dictionary = args.data_path + "train.dec.pkl"
+    source_dataset = args.data_path + "train.source"
+    target_dataset = args.data_path + "train.target"
+    valid_source_dataset = args.data_path + "valid.source"
+    valid_target_dataset = args.data_path + "valid.target"
+    source_dictionary = args.data_path + "train.source.pkl"
+    target_dictionary = args.data_path + "train.target.pkl"
     
     print args.model_path, save_file_name
     print source_dataset
@@ -26,6 +26,7 @@ def main(job_id, args):
     print valid_target_dataset
     print source_dictionary
     print target_dictionary
+
     validerr = train(
         highway=args.highway,
 
@@ -91,7 +92,7 @@ if __name__ == '__main__':
     import sys, time
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('-translate', type=str, default="de_en", help="de_en / cs_en / fi_en / ru_en")
+    #parser.add_argument('-translate', type=str, default="de_en", help="de_en / cs_en / fi_en / ru_en")
     parser.add_argument('-highway', type=int, default=4)
 
     parser.add_argument('-conv_width', type=str, default="1-2-3-4-5-6-7-8")
@@ -143,13 +144,6 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    #if args.translate == "fi_en":
-    #    args.n_words_src = 304
-    #    args.n_words = 302
-
-    #if args.translate not in "de_en cs_en fi_en ru_en".split():
-    #    raise Exception('1')
-
     args.model_name = "bi-char2char"
 
     args.conv_width = [ int(x) for x in args.conv_width.split("-") ]
@@ -157,8 +151,6 @@ if __name__ == '__main__':
 
     args.model_path = "/home/jrthom18/data/dl4mt-c2c/models/" # change accordingly
     args.data_path = "/home/jrthom18/data/dl4mt-c2c/data/" # change accordingly
-    
-    #args.model_path = args.model_path + args.translate + "/"
 
     print "Model path:", args.model_path
 
