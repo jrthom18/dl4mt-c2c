@@ -58,7 +58,7 @@ def translate_model(jobqueue, resultqueue, model, options, k, normalize, build_s
 def main(model, dictionary, dictionary_target, source_file, saveto, k=5,
          normalize=False, encoder_chr_level=False,
          decoder_chr_level=False, utf8=False, 
-          model_id=None, silent=False):
+          model_id=None, silent=False, interactive=True):
 
     from char_base import (build_sampler, gen_sample, init_params)
 
@@ -138,6 +138,25 @@ def main(model, dictionary, dictionary_target, source_file, saveto, k=5,
 
         return idx+1
 
+    def _send_job(sentence):
+        pool_window = options['pool_stride']
+
+        if encoder_chr_level:
+            words = list(sentence.decode('utf-8').strip())
+        else:
+            words = sentence.strip().split()
+
+        x = map(lambda w: word_dict[w] if w in word_dict else 1, words)
+        x = map(lambda ii: ii if ii < options['n_words_src'] else 1, x)
+        x = [2] + x + [3]
+
+        while len(x) % pool_window != 0:
+            x += [0]
+
+        x = [0]*pool_window + x + [0]*pool_window
+        jobqueue.append((0, x))
+        return 1
+
     def _retrieve_jobs(n_samples, silent):
         trans = [None] * n_samples
 
@@ -149,18 +168,33 @@ def main(model, dictionary, dictionary_target, source_file, saveto, k=5,
                     print 'Sample ', (idx+1), '/', n_samples, ' Done', model_id
         return trans
 
-    print 'Translating ', source_file, '...'
-    n_samples = _send_jobs(source_file)
-    print "jobs sent"
+    if interactive:
+        sys.stdout.write("> ")
+        sys.stdout.flush()
+        utterance = sys.stdin.readline()
+        while utterance:
+            n_samples = _send_job(utterance)
+            translate_model(jobqueue, resultqueue, model, options, k, normalize, build_sampler, gen_sample, init_params, model_id, True)
+            trans = _seqs2words(_retrieve_jobs(n_samples, True))
+            print(u' '.join(trans).encode('utf-8'))
+            print("> ", end="")
+            sys.stdout.flush()
+            utterance = sys.stdin.readline()
 
-    translate_model(jobqueue, resultqueue, model, options, k, normalize, build_sampler, gen_sample, init_params, model_id, silent)
-    trans = _seqs2words(_retrieve_jobs(n_samples, silent))
-    print "translations retrieved"
+    else:
+        print 'Translating ', source_file, '...'
+        n_samples = _send_jobs(source_file)
+        print "jobs sent"
 
-    with open(saveto, 'w') as f:
-        print >>f, u'\n'.join(trans).encode('utf-8')
+        translate_model(jobqueue, resultqueue, model, options, k, normalize, build_sampler, gen_sample, init_params, model_id, silent)
+        trans = _seqs2words(_retrieve_jobs(n_samples, silent))
+        print "translations retrieved"
 
-    print "Done", saveto
+        with open(saveto, 'w') as f:
+            print >>f, u'\n'.join(trans).encode('utf-8')
+
+        print "Done", saveto
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -176,16 +210,18 @@ if __name__ == "__main__":
     parser.add_argument('-which', type=str, help="dev / test1 / test2", default="dev") # if you wish to translate any of development / test1 / test2 file from WMT15, simply specify which one here
     parser.add_argument('-source', type=str, default="") # if you wish to provide your own file to be translated, provide an absolute path to the file to be translated
     parser.add_argument('-silent', action="store_true", default=False) # suppress progress messages
+    parser.add_argument('-interactive', action="store_true", default=True) # decode from command line input
 
     args = parser.parse_args()
 
+    data_path = "/home/jrthom18/data/dl4mt-c2c/data/"       # change appropriately
+
+    '''
     which_wmt = None
     if args.many:
         which_wmt = "multi-wmt15"
     else:
         which_wmt = "wmt15"
-
-    data_path = "/home/jrthom18/data/dl4mt-c2c/data/" # change appropriately
 
     if args.which not in "dev test1 test2".split():
         raise Exception('1')
@@ -213,12 +249,13 @@ if __name__ == "__main__":
         dictionary = "%s%s/train/all_%s-%s.%s.tok.304.pkl" % (lang, en, lang, en, lang)
         dictionary_target = "%s%s/train/all_%s-%s.%s.tok.300.pkl" % (lang, en, lang, en, en)
         source = wmts[args.translate][args.which][0][0]
+    '''
 
     char_base = args.model.split("/")[-1]
 
-    dictionary = data_path + "train.enc.2.pkl"          # change appropriately
-    dictionary_target = data_path + "train.dec.2.pkl"   # change appropriately
-    source = data_path + source
+    dictionary = data_path + "train.source.124.pkl"          # change appropriately
+    dictionary_target = data_path + "train.target.122.pkl"   # change appropriately
+    source = data_path + "dev.source" 
 
     if args.source != "":
         source = args.source
@@ -237,6 +274,7 @@ if __name__ == "__main__":
          utf8=args.utf8,
          model_id=char_base,
          silent=args.silent,
+         interactive=args.interactive,
         )
     time2 = time.time()
     duration = (time2-time1)/float(60)

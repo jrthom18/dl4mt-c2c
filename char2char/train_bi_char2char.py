@@ -16,8 +16,8 @@ def main(job_id, args):
     target_dataset = args.data_path + "train.target"
     valid_source_dataset = args.data_path + "valid.source"
     valid_target_dataset = args.data_path + "valid.target"
-    source_dictionary = args.data_path + "train.source.pkl"
-    target_dictionary = args.data_path + "train.target.pkl"
+    source_dictionary = args.data_path + "train.source.124.pkl"
+    target_dictionary = args.data_path + "train.target.122.pkl"
     
     print args.model_path, save_file_name
     print source_dataset
@@ -125,18 +125,18 @@ if __name__ == '__main__':
     parser.add_argument('-patience', type=int, default=-1, help="")
     parser.add_argument('-learning_rate', type=float, default=0.0001, help="")
 
-    parser.add_argument('-n_words_src', type=int, default=838, help="298 for FI-EN")
-    parser.add_argument('-n_words', type=int, default=468, help="292 for FI-EN")
+    parser.add_argument('-n_words_src', type=int, default=124, help="298 for FI-EN")
+    parser.add_argument('-n_words', type=int, default=122, help="292 for FI-EN")
 
     parser.add_argument('-optimizer', type=str, default="adam", help="")
     parser.add_argument('-decay_c', type=int, default=0, help="")
     parser.add_argument('-clip_c', type=int, default=1, help="")
 
-    parser.add_argument('-saveFreq', type=int, default=5000, help="")
-    parser.add_argument('-sampleFreq', type=int, default=5000, help="")
-    parser.add_argument('-dispFreq', type=int, default=1000, help="")
-    parser.add_argument('-validFreq', type=int, default=5000, help="")
-    parser.add_argument('-pbatchFreq', type=int, default=5000, help="")
+    parser.add_argument('-saveFreq', type=int, default=3000, help="")
+    parser.add_argument('-sampleFreq', type=int, default=3000, help="")
+    parser.add_argument('-dispFreq', type=int, default=100, help="")
+    parser.add_argument('-validFreq', type=int, default=5000000000, help="")
+    parser.add_argument('-pbatchFreq', type=int, default=-1, help="")
     parser.add_argument('-sort_size', type=int, default=20, help="")
 
     parser.add_argument('-source_word_level', type=int, default=0, help="")
