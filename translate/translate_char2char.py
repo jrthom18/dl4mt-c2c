@@ -206,10 +206,10 @@ class Translator(object):
         return trans
 
     def translate(self, message_text):
-        n_samples = send_job(message_text)
-        translate_model(self.jobqueue, self.resultqueue, self.model, self.options, self.k, self.normalize, self.build_sampler, self.gen_sample, 
-            self.init_params, self.model_id, True)
-        trans = seqs2words(retrieve_jobs(n_samples, True))
+        from char_base import (build_sampler, gen_sample, init_params)
+        n_samples = self.send_job(message_text)
+        translate_model(self.jobqueue, self.resultqueue, self.model, self.options, self.k, self.normalize, build_sampler, gen_sample, init_params, self.model_id, True)
+        trans = self.seqs2words(self.retrieve_jobs(n_samples, True))
         message = u' '.join(trans).encode('utf-8')
         return message
 
