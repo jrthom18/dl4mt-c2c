@@ -104,7 +104,7 @@ class Translator(object):
             self.options = pkl.load(f)
 
         # load source dictionary and invert
-        with open(dictionary, 'rb') as f:
+        with open(self.dictionary, 'rb') as f:
             self.word_dict = pkl.load(f)
         word_idict = dict()
         for kk, vv in self.word_dict.iteritems():
@@ -113,7 +113,7 @@ class Translator(object):
         #word_idict[1] = 'UNK'
 
         # load target dictionary and invert
-        with open(dictionary_target, 'rb') as f:
+        with open(self.dictionary_target, 'rb') as f:
             self.word_dict_trg = pkl.load(f)
         self.word_idict_trg = dict()
         for kk, vv in self.word_dict_trg.iteritems():
@@ -135,11 +135,11 @@ class Translator(object):
             for w in cc:
                 if w == 0:
                     break
-                if utf8:
+                if self.utf8:
                     ww.append(self.word_idict_trg[w].encode('utf-8'))
                 else:
                     ww.append(self.word_idict_trg[w])
-            if decoder_chr_level:
+            if self.decoder_chr_level:
                 capsw.append(''.join(ww))
             else:
                 capsw.append(' '.join(ww))
@@ -151,7 +151,7 @@ class Translator(object):
                 # idx : 0 ... len-1 
                 pool_window = self.options['pool_stride']
 
-                if encoder_chr_level:
+                if self.encoder_chr_level:
                     words = list(line.decode('utf-8').strip())
                 else:
                     words = line.strip().split()
