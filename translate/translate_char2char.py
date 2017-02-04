@@ -16,161 +16,6 @@ import numpy
 import cPickle as pkl
 from mixer import *
 
-app = Flask(__name__)
-
-data_path = "/home/jrthom18/data/char_model/dl4mt-c2c/data/"
-model = "models/bi-char2char.grads.194124.npz"
-char_base = model.split("/")[-1]
-dictionary = data_path + "train.source.124.pkl"          # change appropriately
-dictionary_target = data_path + "train.target.122.pkl"   # change appropriately
-source = data_path + "dev.source" 
-saveto = data_path + "dev.out"
-k = 20
-
-translator = Translator(model, dictionary, dictionary_target, source, saveto, k, True, True, True, True, char_base, False, True)
-
-# Facebook Messenger app verification
-VERIFY_TOKEN = "my_voice_is_my_password_verify_me"
-PAGE_ACCESS_TOKEN = "EAAUCWBAyvEkBAM5kmECcUmqxH15u8bKbGuhmJ1WNXZBDZBfOPlGESoPZC8KQvKqa9oelFuZCQ3REcCLxfX5tiqTRKZCWEfnAszhlCLZCAgVWZCmZA78IW0wj9yTe3fH46Qq0mcD0FZB4wfsydRg0cB4dAu6DY5HCE69ZAJ14JY4EFZCZAgZDZD"
-
-@app.route('/', methods=['GET'])
-def verify():
-    # when the endpoint is registered as a webhook, it must echo back
-    # the 'hub.challenge' value it receives in the query arguments
-    if request.args.get("hub.mode") == "subscribe" and request.args.get("hub.challenge"):
-        if not request.args.get("hub.verify_token") == VERIFY_TOKEN:
-            return "Verification token mismatch", 403
-        return request.args["hub.challenge"], 200
-
-    return "Hello world", 200
-
-
-@app.route('/', methods=['POST'])
-def webhook():
-    # endpoint for processing incoming messaging events
-
-    data = request.get_json()
-    #log(data)  # you may not want to log every incoming message in production, but it's good for testing
-
-    if data["object"] == "page":
-
-        for entry in data["entry"]:
-            for messaging_event in entry["messaging"]:
-
-                if messaging_event.get("message"):  # someone sent us a message
-
-                    sender_id = messaging_event["sender"]["id"]        # the facebook ID of the person sending you the message
-                    recipient_id = messaging_event["recipient"]["id"]  # the recipient's ID, which should be your page's facebook ID
-                    message_text = messaging_event["message"]["text"]  # the message's text
-                    # Respond by decoding message_text
-                    message = translator.translate(message_text)
-                    send_message(sender_id, message)
-
-                if messaging_event.get("delivery"):  # delivery confirmation
-                    pass
-
-                if messaging_event.get("optin"):  # optin confirmation
-                    pass
-
-                if messaging_event.get("postback"):  # user clicked/tapped "postback" button in earlier message
-                    pass
-
-    return "ok", 200
-
-
-def send_message(recipient_id, message_text):
-
-    log("sending message to {recipient}: {text}".format(recipient=recipient_id, text=message_text))
-
-    params = {
-        "access_token": PAGE_ACCESS_TOKEN
-    }
-    headers = {
-        "Content-Type": "application/json"
-    }
-    data = json.dumps({
-        "recipient": {
-            "id": recipient_id
-        },
-        "message": {
-            "text": message_text
-        }
-    })
-    r = requests.post("https://graph.facebook.com/v2.6/me/messages", params=params, headers=headers, data=data)
-    if r.status_code != 200:
-        log(r.status_code)
-        log(r.text)
-
-
-def log(message):  # simple wrapper for logging to stdout on heroku
-    print str(message)
-    sys.stdout.flush()
-
-# Globals for init_translation_model
-trng = 0
-tparams = 0
-use_noise = 0
-f_init = 0
-f_next = 0
-
-def init_translation_model(model, options, init_params, build_sampler):
-    global trng
-    global tparams
-    global use_noise
-    global f_init
-    global f_next
-
-    from theano.sandbox.rng_mrg import MRG_RandomStreams as RandomStreams
-    trng = RandomStreams(1234)
-
-    # allocate model parameters
-    params = init_params(options)
-
-    # load model parameters and set theano shared variables
-    params = load_params(model, params)
-    tparams = init_tparams(params)
-
-    # word index
-    use_noise = theano.shared(numpy.float32(0.))
-    f_init, f_next = build_sampler(tparams, options, trng, use_noise)
-
-
-def translate_model(jobqueue, resultqueue, model, options, k, normalize, build_sampler, gen_sample, init_params, model_id, silent):
-
-    def _translate(seq):
-        use_noise.set_value(0.)
-        # sample given an input sequence and obtain scores
-        # NOTE : if seq length too small, do something about it
-        sample, score = gen_sample(tparams, f_init, f_next,
-                                   numpy.array(seq).reshape([len(seq), 1]),
-                                   options, trng=trng, k=k, maxlen=500,
-                                   stochastic=False, argmax=False)
-
-        # normalize scores according to sequence lengths
-        if normalize:
-            lengths = numpy.array([len(s) for s in sample]) 
-            score = score / lengths
-        sidx = numpy.argmin(score)
-        return sample[sidx]
-
-    while jobqueue:
-        req = jobqueue.pop(0)
-
-        idx, x = req[0], req[1]
-        if not silent:
-            print "sentence", idx, model_id
-        seq = _translate(x)
-
-        resultqueue.append((idx, seq))
-    return
-
-def main(model, dictionary, dictionary_target, source_file, saveto, k=5,
-         normalize=False, encoder_chr_level=False,
-         decoder_chr_level=False, utf8=False, 
-          model_id=None, silent=False, interactive=True):
-    #Do nothing
-    
-
 class Translator(object):
 
     def __init__(self, model, dictionary, dictionary_target, source_file, saveto, k,
@@ -339,6 +184,153 @@ class Translator(object):
         print "Done", saveto
     '''
 
+app = Flask(__name__)
+
+data_path = "/home/jrthom18/data/char_model/dl4mt-c2c/data/"
+model = "models/bi-char2char.grads.194124.npz"
+char_base = model.split("/")[-1]
+dictionary = data_path + "train.source.124.pkl"          # change appropriately
+dictionary_target = data_path + "train.target.122.pkl"   # change appropriately
+source = data_path + "dev.source" 
+saveto = data_path + "dev.out"
+k = 20
+
+translator = Translator(model, dictionary, dictionary_target, source, saveto, k, True, True, True, True, char_base, False, True)
+
+# Facebook Messenger app verification
+VERIFY_TOKEN = "my_voice_is_my_password_verify_me"
+PAGE_ACCESS_TOKEN = "EAAUCWBAyvEkBAM5kmECcUmqxH15u8bKbGuhmJ1WNXZBDZBfOPlGESoPZC8KQvKqa9oelFuZCQ3REcCLxfX5tiqTRKZCWEfnAszhlCLZCAgVWZCmZA78IW0wj9yTe3fH46Qq0mcD0FZB4wfsydRg0cB4dAu6DY5HCE69ZAJ14JY4EFZCZAgZDZD"
+
+@app.route('/', methods=['GET'])
+def verify():
+    # when the endpoint is registered as a webhook, it must echo back
+    # the 'hub.challenge' value it receives in the query arguments
+    if request.args.get("hub.mode") == "subscribe" and request.args.get("hub.challenge"):
+        if not request.args.get("hub.verify_token") == VERIFY_TOKEN:
+            return "Verification token mismatch", 403
+        return request.args["hub.challenge"], 200
+
+    return "Hello world", 200
+
+
+@app.route('/', methods=['POST'])
+def webhook():
+    # endpoint for processing incoming messaging events
+
+    data = request.get_json()
+    #log(data)  # you may not want to log every incoming message in production, but it's good for testing
+
+    if data["object"] == "page":
+
+        for entry in data["entry"]:
+            for messaging_event in entry["messaging"]:
+
+                if messaging_event.get("message"):  # someone sent us a message
+
+                    sender_id = messaging_event["sender"]["id"]        # the facebook ID of the person sending you the message
+                    recipient_id = messaging_event["recipient"]["id"]  # the recipient's ID, which should be your page's facebook ID
+                    message_text = messaging_event["message"]["text"]  # the message's text
+                    # Respond by decoding message_text
+                    message = translator.translate(message_text)
+                    send_message(sender_id, message)
+
+                if messaging_event.get("delivery"):  # delivery confirmation
+                    pass
+
+                if messaging_event.get("optin"):  # optin confirmation
+                    pass
+
+                if messaging_event.get("postback"):  # user clicked/tapped "postback" button in earlier message
+                    pass
+
+    return "ok", 200
+
+
+def send_message(recipient_id, message_text):
+
+    log("sending message to {recipient}: {text}".format(recipient=recipient_id, text=message_text))
+
+    params = {
+        "access_token": PAGE_ACCESS_TOKEN
+    }
+    headers = {
+        "Content-Type": "application/json"
+    }
+    data = json.dumps({
+        "recipient": {
+            "id": recipient_id
+        },
+        "message": {
+            "text": message_text
+        }
+    })
+    r = requests.post("https://graph.facebook.com/v2.6/me/messages", params=params, headers=headers, data=data)
+    if r.status_code != 200:
+        log(r.status_code)
+        log(r.text)
+
+
+def log(message):  # simple wrapper for logging to stdout on heroku
+    print str(message)
+    sys.stdout.flush()
+
+# Globals for init_translation_model
+trng = 0
+tparams = 0
+use_noise = 0
+f_init = 0
+f_next = 0
+
+def init_translation_model(model, options, init_params, build_sampler):
+    global trng
+    global tparams
+    global use_noise
+    global f_init
+    global f_next
+
+    from theano.sandbox.rng_mrg import MRG_RandomStreams as RandomStreams
+    trng = RandomStreams(1234)
+
+    # allocate model parameters
+    params = init_params(options)
+
+    # load model parameters and set theano shared variables
+    params = load_params(model, params)
+    tparams = init_tparams(params)
+
+    # word index
+    use_noise = theano.shared(numpy.float32(0.))
+    f_init, f_next = build_sampler(tparams, options, trng, use_noise)
+
+
+def translate_model(jobqueue, resultqueue, model, options, k, normalize, build_sampler, gen_sample, init_params, model_id, silent):
+
+    def _translate(seq):
+        use_noise.set_value(0.)
+        # sample given an input sequence and obtain scores
+        # NOTE : if seq length too small, do something about it
+        sample, score = gen_sample(tparams, f_init, f_next,
+                                   numpy.array(seq).reshape([len(seq), 1]),
+                                   options, trng=trng, k=k, maxlen=500,
+                                   stochastic=False, argmax=False)
+
+        # normalize scores according to sequence lengths
+        if normalize:
+            lengths = numpy.array([len(s) for s in sample]) 
+            score = score / lengths
+        sidx = numpy.argmin(score)
+        return sample[sidx]
+
+    while jobqueue:
+        req = jobqueue.pop(0)
+
+        idx, x = req[0], req[1]
+        if not silent:
+            print "sentence", idx, model_id
+        seq = _translate(x)
+
+        resultqueue.append((idx, seq))
+    return    
 
 if __name__ == "__main__":
     app.run(debug=True)
