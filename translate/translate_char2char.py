@@ -16,6 +16,64 @@ import numpy
 import cPickle as pkl
 from mixer import *
 
+# Globals for init_translation_model
+trng = 0
+tparams = 0
+use_noise = 0
+f_init = 0
+f_next = 0
+
+def init_translation_model(model, options, init_params, build_sampler):
+    global trng
+    global tparams
+    global use_noise
+    global f_init
+    global f_next
+
+    from theano.sandbox.rng_mrg import MRG_RandomStreams as RandomStreams
+    trng = RandomStreams(1234)
+
+    # allocate model parameters
+    params = init_params(options)
+
+    # load model parameters and set theano shared variables
+    params = load_params(model, params)
+    tparams = init_tparams(params)
+
+    # word index
+    use_noise = theano.shared(numpy.float32(0.))
+    f_init, f_next = build_sampler(tparams, options, trng, use_noise)
+
+
+def translate_model(jobqueue, resultqueue, model, options, k, normalize, build_sampler, gen_sample, init_params, model_id, silent):
+
+    def _translate(seq):
+        use_noise.set_value(0.)
+        # sample given an input sequence and obtain scores
+        # NOTE : if seq length too small, do something about it
+        sample, score = gen_sample(tparams, f_init, f_next,
+                                   numpy.array(seq).reshape([len(seq), 1]),
+                                   options, trng=trng, k=k, maxlen=500,
+                                   stochastic=False, argmax=False)
+
+        # normalize scores according to sequence lengths
+        if normalize:
+            lengths = numpy.array([len(s) for s in sample]) 
+            score = score / lengths
+        sidx = numpy.argmin(score)
+        return sample[sidx]
+
+    while jobqueue:
+        req = jobqueue.pop(0)
+
+        idx, x = req[0], req[1]
+        if not silent:
+            print "sentence", idx, model_id
+        seq = _translate(x)
+
+        resultqueue.append((idx, seq))
+    return 
+
 class Translator(object):
 
     def __init__(self, model, dictionary, dictionary_target, source_file, saveto, k,
@@ -272,65 +330,7 @@ def send_message(recipient_id, message_text):
 
 def log(message):  # simple wrapper for logging to stdout on heroku
     print str(message)
-    sys.stdout.flush()
-
-# Globals for init_translation_model
-trng = 0
-tparams = 0
-use_noise = 0
-f_init = 0
-f_next = 0
-
-def init_translation_model(model, options, init_params, build_sampler):
-    global trng
-    global tparams
-    global use_noise
-    global f_init
-    global f_next
-
-    from theano.sandbox.rng_mrg import MRG_RandomStreams as RandomStreams
-    trng = RandomStreams(1234)
-
-    # allocate model parameters
-    params = init_params(options)
-
-    # load model parameters and set theano shared variables
-    params = load_params(model, params)
-    tparams = init_tparams(params)
-
-    # word index
-    use_noise = theano.shared(numpy.float32(0.))
-    f_init, f_next = build_sampler(tparams, options, trng, use_noise)
-
-
-def translate_model(jobqueue, resultqueue, model, options, k, normalize, build_sampler, gen_sample, init_params, model_id, silent):
-
-    def _translate(seq):
-        use_noise.set_value(0.)
-        # sample given an input sequence and obtain scores
-        # NOTE : if seq length too small, do something about it
-        sample, score = gen_sample(tparams, f_init, f_next,
-                                   numpy.array(seq).reshape([len(seq), 1]),
-                                   options, trng=trng, k=k, maxlen=500,
-                                   stochastic=False, argmax=False)
-
-        # normalize scores according to sequence lengths
-        if normalize:
-            lengths = numpy.array([len(s) for s in sample]) 
-            score = score / lengths
-        sidx = numpy.argmin(score)
-        return sample[sidx]
-
-    while jobqueue:
-        req = jobqueue.pop(0)
-
-        idx, x = req[0], req[1]
-        if not silent:
-            print "sentence", idx, model_id
-        seq = _translate(x)
-
-        resultqueue.append((idx, seq))
-    return    
+    sys.stdout.flush()   
 
 if __name__ == "__main__":
     app.run(debug=True)
