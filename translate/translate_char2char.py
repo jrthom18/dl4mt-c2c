@@ -10,13 +10,14 @@ from flask import Flask, request
 reload(sys)
 sys.setdefaultencoding('utf-8')
 
-sys.path.insert(0, "/home/jrthom18/data/dl4mt-c2c/char2char/") # change appropriately
+sys.path.insert(0, "/home/jrthom18/data/char_model/dl4mt-c2c/char2char/") # change appropriately
 
 import numpy
 import cPickle as pkl
 from mixer import *
 
 app = Flask(__name__)
+translator = None
 
 # Facebook Messenger app verification
 VERIFY_TOKEN = "my_voice_is_my_password_verify_me"
@@ -53,10 +54,8 @@ def webhook():
                     recipient_id = messaging_event["recipient"]["id"]  # the recipient's ID, which should be your page's facebook ID
                     message_text = messaging_event["message"]["text"]  # the message's text
                     # Respond by decoding message_text
-                    n_samples = _send_job(message_text)
-                    translate_model(jobqueue, resultqueue, model, options, k, normalize, build_sampler, gen_sample, init_params, model_id, True)
-                    trans = _seqs2words(_retrieve_jobs(n_samples, True))
-                    send_message(sender_id, u' '.join(trans).encode('utf-8'))
+                    message = translator.translate(message_text)
+                    send_message(sender_id, message)
 
                 if messaging_event.get("delivery"):  # delivery confirmation
                     pass
@@ -160,39 +159,69 @@ def main(model, dictionary, dictionary_target, source_file, saveto, k=5,
          normalize=False, encoder_chr_level=False,
          decoder_chr_level=False, utf8=False, 
           model_id=None, silent=False, interactive=True):
+    
+    global translator = Translator(model, dictionary, dictionary_target, source_file, saveto, k,
+         normalize, encoder_chr_level,
+         decoder_chr_level, utf8, 
+          model_id, silent, interactive)
 
-    from char_base import (build_sampler, gen_sample, init_params)
+class Translator(object):
 
-    # load model model_options
-    # /misc/kcgscratch1/ChoGroup/jasonlee/dl4mt-cdec/models/one-multiscale-conv-two-hw-lngru-1234567-100-150-200-200-200-200-200-66-one.pkl
-    pkl_file = model.split('.')[0] + '.pkl'
-    with open(pkl_file, 'rb') as f:
-        options = pkl.load(f)
+    def __init__(self, model, dictionary, dictionary_target, source_file, saveto, k,
+         normalize, encoder_chr_level,
+         decoder_chr_level, utf8, 
+          model_id, silent, interactive):
 
-    # load source dictionary and invert
-    with open(dictionary, 'rb') as f:
-        word_dict = pkl.load(f)
-    word_idict = dict()
-    for kk, vv in word_dict.iteritems():
-        word_idict[vv] = kk
-    #word_idict[0] = 'ZERO'
-    #word_idict[1] = 'UNK'
+        self.model = model
+        self.dictionary = dictionary
+        self.dictionary_target = dictionary_target
+        self.source_file = source_file
+        self.saveto = saveto
+        self.k = k
+        self.normalize = normalize
+        self.encoder_chr_level = encoder_chr_level
+        self.decoder_chr_level = decoder_chr_level
+        self.utf8 = utf8
+        self.model_id = model_id
+        self.silent = silent
+        self.interactive = interactive
 
-    # load target dictionary and invert
-    with open(dictionary_target, 'rb') as f:
-        word_dict_trg = pkl.load(f)
-    word_idict_trg = dict()
-    for kk, vv in word_dict_trg.iteritems():
-        word_idict_trg[vv] = kk
-    #word_idict_trg[0] = 'ZERO'
-    #word_idict_trg[1] = 'UNK'
+        from char_base import (build_sampler, gen_sample, init_params)
 
-    # create input and output queues for processes
-    jobqueue = []
-    resultqueue = []
+        # load model model_options
+        # /misc/kcgscratch1/ChoGroup/jasonlee/dl4mt-cdec/models/one-multiscale-conv-two-hw-lngru-1234567-100-150-200-200-200-200-200-66-one.pkl
+        pkl_file = self.model.split('.')[0] + '.pkl'
+        with open(pkl_file, 'rb') as f:
+            self.options = pkl.load(f)
 
-    # utility function
-    def _seqs2words(caps):
+        # load source dictionary and invert
+        with open(dictionary, 'rb') as f:
+            self.word_dict = pkl.load(f)
+        word_idict = dict()
+        for kk, vv in self.word_dict.iteritems():
+            word_idict[vv] = kk
+        #word_idict[0] = 'ZERO'
+        #word_idict[1] = 'UNK'
+
+        # load target dictionary and invert
+        with open(dictionary_target, 'rb') as f:
+            self.word_dict_trg = pkl.load(f)
+        self.word_idict_trg = dict()
+        for kk, vv in self.word_dict_trg.iteritems():
+            self.word_idict_trg[vv] = kk
+        #word_idict_trg[0] = 'ZERO'
+        #word_idict_trg[1] = 'UNK'
+
+        # create input and output queues for processes
+        self.jobqueue = []
+        self.resultqueue = []
+
+        init_translation_model(self.model, self.options, init_params, build_sampler)
+        print("Model initiation complete...ready for input.")
+        app.run(debug=True)
+
+
+    def seqs2words(self, caps):
         capsw = []
         for cc in caps:
             ww = []
@@ -200,28 +229,28 @@ def main(model, dictionary, dictionary_target, source_file, saveto, k=5,
                 if w == 0:
                     break
                 if utf8:
-                    ww.append(word_idict_trg[w].encode('utf-8'))
+                    ww.append(self.word_idict_trg[w].encode('utf-8'))
                 else:
-                    ww.append(word_idict_trg[w])
+                    ww.append(self.word_idict_trg[w])
             if decoder_chr_level:
                 capsw.append(''.join(ww))
             else:
                 capsw.append(' '.join(ww))
         return capsw
 
-    def _send_jobs(fname):
+    def send_jobs(self, fname):
         with open(fname, 'r') as f:
             for idx, line in enumerate(f):
                 # idx : 0 ... len-1 
-                pool_window = options['pool_stride']
+                pool_window = self.options['pool_stride']
 
                 if encoder_chr_level:
                     words = list(line.decode('utf-8').strip())
                 else:
                     words = line.strip().split()
 
-                x = map(lambda w: word_dict[w] if w in word_dict else 1, words)
-                x = map(lambda ii: ii if ii < options['n_words_src'] else 1, x)
+                x = map(lambda w: self.word_dict[w] if w in self.word_dict else 1, words)
+                x = map(lambda ii: ii if ii < self.options['n_words_src'] else 1, x)
                 x = [2] + x + [3]
 
                 # len : 77, pool_window 10 -> 3 
@@ -235,42 +264,47 @@ def main(model, dictionary, dictionary_target, source_file, saveto, k=5,
 
                 x = [0]*pool_window + x + [0]*pool_window
 
-                jobqueue.append((idx, x))
+                self.jobqueue.append((idx, x))
 
         return idx+1
 
-    def _send_job(sentence):
-        pool_window = options['pool_stride']
+    def send_job(self, sentence):
+        pool_window = self.options['pool_stride']
 
-        if encoder_chr_level:
+        if self.encoder_chr_level:
             words = list(sentence.decode('utf-8').strip())
         else:
             words = sentence.strip().split()
 
-        x = map(lambda w: word_dict[w] if w in word_dict else 1, words)
-        x = map(lambda ii: ii if ii < options['n_words_src'] else 1, x)
+        x = map(lambda w: self.word_dict[w] if w in self.word_dict else 1, words)
+        x = map(lambda ii: ii if ii < self.options['n_words_src'] else 1, x)
         x = [2] + x + [3]
 
         while len(x) % pool_window != 0:
             x += [0]
 
         x = [0]*pool_window + x + [0]*pool_window
-        jobqueue.append((0, x))
+        self.jobqueue.append((0, x))
         return 1
 
-    def _retrieve_jobs(n_samples, silent):
+    def retrieve_jobs(self, n_samples, silent):
         trans = [None] * n_samples
 
         for idx in xrange(n_samples):
-            resp = resultqueue.pop(0)
+            resp = self.resultqueue.pop(0)
             trans[resp[0]] = resp[1]
             if numpy.mod(idx, 10) == 0:
                 if not silent:
-                    print 'Sample ', (idx+1), '/', n_samples, ' Done', model_id
+                    print 'Sample ', (idx+1), '/', n_samples, ' Done', self.model_id
         return trans
 
-    init_translation_model(model, options, init_params, build_sampler)
-    print("Model initiation complete...ready for input.")
+    def translate(self, message_text):
+        n_samples = send_job(message_text)
+        translate_model(self.jobqueue, self.resultqueue, self.model, self.options, self.k, self.normalize, self.build_sampler, self.gen_sample, 
+            self.init_params, self.model_id, True)
+        trans = seqs2words(retrieve_jobs(n_samples, True))
+        message = u' '.join(trans).encode('utf-8')
+        return message
 
     '''
     if interactive:
@@ -303,7 +337,6 @@ def main(model, dictionary, dictionary_target, source_file, saveto, k=5,
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
     parser = argparse.ArgumentParser()
     parser.add_argument('-k', type=int, default=20) # beam width
     parser.add_argument('-n', action="store_true", default=True) # normalize scores for different hypothesis based on their length (to penalize shorter hypotheses, longer hypotheses are already penalized by the BLEU measure, which is precision of sorts).
@@ -321,7 +354,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    data_path = "/home/jrthom18/data/dl4mt-c2c/data/"       # change appropriately
+    data_path = "/home/jrthom18/data/char_model/dl4mt-c2c/data/"       # change appropriately
 
     '''
     which_wmt = None
