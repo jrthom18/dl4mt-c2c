@@ -17,7 +17,17 @@ import cPickle as pkl
 from mixer import *
 
 app = Flask(__name__)
-translator = None
+
+data_path = "/home/jrthom18/data/char_model/dl4mt-c2c/data/"
+model = "models/bi-char2char.grads.194124.npz"
+char_base = model.split("/")[-1]
+dictionary = data_path + "train.source.124.pkl"          # change appropriately
+dictionary_target = data_path + "train.target.122.pkl"   # change appropriately
+source = data_path + "dev.source" 
+saveto = data_path + "dev.out"
+k = 20
+
+translator = Translator(model, dictionary, dictionary_target, source, saveto, k, True, True, True, True, char_base, False, True)
 
 # Facebook Messenger app verification
 VERIFY_TOKEN = "my_voice_is_my_password_verify_me"
@@ -37,7 +47,6 @@ def verify():
 
 @app.route('/', methods=['POST'])
 def webhook():
-
     # endpoint for processing incoming messaging events
 
     data = request.get_json()
@@ -159,11 +168,8 @@ def main(model, dictionary, dictionary_target, source_file, saveto, k=5,
          normalize=False, encoder_chr_level=False,
          decoder_chr_level=False, utf8=False, 
           model_id=None, silent=False, interactive=True):
+    #Do nothing
     
-    global translator = Translator(model, dictionary, dictionary_target, source_file, saveto, k,
-         normalize, encoder_chr_level,
-         decoder_chr_level, utf8, 
-          model_id, silent, interactive)
 
 class Translator(object):
 
@@ -218,8 +224,6 @@ class Translator(object):
 
         init_translation_model(self.model, self.options, init_params, build_sampler)
         print("Model initiation complete...ready for input.")
-        app.run(debug=True)
-
 
     def seqs2words(self, caps):
         capsw = []
@@ -337,6 +341,8 @@ class Translator(object):
 
 
 if __name__ == "__main__":
+    app.run(debug=True)
+    '''
     parser = argparse.ArgumentParser()
     parser.add_argument('-k', type=int, default=20) # beam width
     parser.add_argument('-n', action="store_true", default=True) # normalize scores for different hypothesis based on their length (to penalize shorter hypotheses, longer hypotheses are already penalized by the BLEU measure, which is precision of sorts).
@@ -356,6 +362,7 @@ if __name__ == "__main__":
 
     data_path = "/home/jrthom18/data/char_model/dl4mt-c2c/data/"       # change appropriately
 
+    '''
     '''
     which_wmt = None
     if args.many:
@@ -390,7 +397,7 @@ if __name__ == "__main__":
         dictionary_target = "%s%s/train/all_%s-%s.%s.tok.300.pkl" % (lang, en, lang, en, en)
         source = wmts[args.translate][args.which][0][0]
     '''
-
+    '''
     char_base = args.model.split("/")[-1]
 
     dictionary = data_path + "train.source.124.pkl"          # change appropriately
@@ -419,3 +426,4 @@ if __name__ == "__main__":
     time2 = time.time()
     duration = (time2-time1)/float(60)
     print("Translation took %.2f minutes" % duration)
+    '''
