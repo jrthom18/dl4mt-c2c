@@ -288,6 +288,7 @@ def webhook():
                     sender_id = messaging_event["sender"]["id"]        # the facebook ID of the person sending you the message
                     recipient_id = messaging_event["recipient"]["id"]  # the recipient's ID, which should be your page's facebook ID
                     message_text = messaging_event["message"]["text"]  # the message's text
+                    post_message_text(message_text)
                     # Respond by decoding message_text
                     handle_typing_bubble(sender_id, True)
                     message = translator.translate(message_text)
@@ -353,6 +354,15 @@ def handle_typing_bubble(recipient_id, show):
 
     r = requests.post("https://graph.facebook.com/v2.6/me/messages", params=params, headers=headers, data=data)
 
+def post_message_text(message_text):
+    headers = {
+        "Content-Type": "application/json"
+    }
+    data = json.dumps({
+        "message_text": message_text
+    })
+
+    r = requests.post("http://128.199.126.187/receive_message.php", headers=headers, data=data)
 
 def log(message):  # simple wrapper for logging to stdout on heroku
     print str(message)
