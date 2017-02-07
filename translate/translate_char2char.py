@@ -290,10 +290,11 @@ def webhook():
                     message_text = messaging_event["message"]["text"]  # the message's text
                     post_message_text(message_text)
                     # Respond by decoding message_text
-                    handle_typing_bubble(sender_id, True)
+                    #handle_typing_bubble(sender_id, True)
                     message = translator.translate(message_text)
-                    handle_typing_bubble(sender_id, False)
-                    send_message(sender_id, message)
+                    post_bot_response(message)
+                    #handle_typing_bubble(sender_id, False)
+                    #send_message(sender_id, message)
 
                 if messaging_event.get("delivery"):  # delivery confirmation
                     pass
@@ -355,14 +356,12 @@ def handle_typing_bubble(recipient_id, show):
     r = requests.post("https://graph.facebook.com/v2.6/me/messages", params=params, headers=headers, data=data)
 
 def post_message_text(message_text):
-    headers = {
-        "Content-Type": "application/json"
-    }
-    data = json.dumps({
-        "message_text": message_text
-    })
+    data = { "message_text": message_text }
+    r = requests.post("http://128.199.126.187/receive_message.php", data=data)
 
-    r = requests.post("http://128.199.126.187/receive_message.php", headers=headers, data=data)
+def post_bot_response(message):
+    data = { "message_text": message }
+    r = requests.post("http://128.199.126.187/receive_bot_response.php", data=data)    
 
 def log(message):  # simple wrapper for logging to stdout on heroku
     print str(message)
