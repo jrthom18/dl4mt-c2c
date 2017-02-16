@@ -278,7 +278,7 @@ def webhook():
     data = request.get_json()
     log(data)  # you may not want to log every incoming message in production, but it's good for testing
 
-    message_text = data["message_text"]
+    message_text = request.form["message_text"]
     message = translator.translate(message_text)
     post_bot_response(message)
     return "ok", 200

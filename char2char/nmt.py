@@ -191,6 +191,8 @@ def train(
             eidx = model['eidx']
         if cidx is None:
             try:
+                # Do this to make training on new data work
+                #cidx = 0
                 cidx = model['cidx']
             except:
                 cidx = 0

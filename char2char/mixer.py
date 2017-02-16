@@ -484,6 +484,8 @@ def multi_scale_conv_encoder(tparams, state_below, options, prefix='conv_enc',
     for idx in range(len(width)):
         curr_width = width[idx]
 
+        # on CPU
+        # ouput.append(conv2d(data, W[idx], border_mode='half'))
         output.append(dnn_conv(data, W[idx], border_mode='half', precision='float32'))
         # output[idx].shape = (n_samples, nkernels[idx], (maxlen_x_pad + 2*pool_stride), 1)
 
@@ -495,6 +497,8 @@ def multi_scale_conv_encoder(tparams, state_below, options, prefix='conv_enc',
     result = tensor.concatenate(output, axis=1)
     # result.shape = (n_samples, sum(nkernels), (maxlen_x_pad + 2*pool_stride), 1)
 
+    # on CPU
+    # result = pool_2d(result, (pool_window, 1), st=(pool_stride, 1), mode='max', padding=(0, 0))
     result = dnn_pool(result, (pool_window, 1), stride=(pool_stride, 1), mode='max', pad=(0, 0))
     # result.shape = (n_samples, sum(nkernels), (maxlen_x_pad/pool_stride + 2), 1)
 

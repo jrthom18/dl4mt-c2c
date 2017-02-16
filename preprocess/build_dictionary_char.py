@@ -6,6 +6,7 @@ import codecs
 
 from collections import OrderedDict
 
+# To run in terminal: python -c "import build_dictionary_char; build_dictionary_char.main('../data/train.source',1000,1)"
 def main(filename, short_list, src):
     # Build character dictionaries
     print 'Processing', filename
