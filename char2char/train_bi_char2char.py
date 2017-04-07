@@ -79,6 +79,7 @@ def main(job_id, args):
         save_every_saveFreq=1,
         use_bpe=0,
         quit_immediately=args.quit_immediately,
+        incremental_adaptation_mode=args.incremental_adaptation_mode,
         init_params=init_params,
         build_model=build_model,
         build_sampler=build_sampler,
@@ -120,6 +121,7 @@ if __name__ == '__main__':
     parser.add_argument('-re_load', action="store_true", default=False)
     parser.add_argument('-re_load_old_setting', action="store_true", default=False)
     parser.add_argument('-quit_immediately', action="store_true", default=False, help="if true, will not proceed training, only print the size of the model.")
+    parser.add_argument('-incremental_adaptation_mode', action="store_true", default=False)
 
     parser.add_argument('-max_epochs', type=int, default=1000000000000, help="")
     parser.add_argument('-patience', type=int, default=-1, help="")

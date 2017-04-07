@@ -111,6 +111,7 @@ def train(
       save_burn_in=20000,
       use_bpe=0,
       quit_immediately=False,
+      incremental_adaptation_mode=False,
       init_params=None,
       build_model=None,
       build_sampler=None,
@@ -191,9 +192,11 @@ def train(
             eidx = model['eidx']
         if cidx is None:
             try:
-                # Do this to make training on new data work
-                #cidx = 0
-                cidx = model['cidx']
+                # TODO: If doing incremental adaptation set cidx to 0
+                if incremental_adaptation_mode:
+                  cidx = 0
+                else:
+                  cidx = model['cidx']
             except:
                 cidx = 0
     else:
@@ -349,7 +352,65 @@ def train(
                 print "Jumping [%d / %d] examples" % (cc, cidx)
             train.next()
 
+    data_path = "/home/jrthom18/data/char_model/dl4mt-c2c/data/"       # change appropriately
+
     for epoch in xrange(max_epochs):
+        # TODO: 
+        #   - Populate adapt.source and adapt.target with utterances and revised responses from CRM site
+        #   - If doing incremental adaptation:
+        #     1. build new source and target files with 14% adaptation data and 86% random original corpus data
+
+        if incremental_adaptation_mode:
+          
+            print 'Generating new data sets for incremental adaptation process ...'
+            adapt_source = [line.rstrip('\n') for line in open(data_path + 'adapt.source')]
+            adapt_target = [line.rstrip('\n') for line in open(data_path + 'adapt.target')]
+
+            adaptation_data_size = len(adapt_source)
+            original_data_size = round(6.142857 * adaptation_data_size)
+            
+            train_sources = [line.rstrip('\n') for line in open(data_path + 'train.source')]
+            train_targets = [line.rstrip('\n') for line in open(data_path + 'train.target')]
+
+            rand_train_sources_batch = numpy.random.choice(train_sources, size=original_data_size, replace=False).tolist()
+            rand_train_targets_batch = [train_targets[train_sources.index(u)] for u in rand_train_sources_batch]
+            
+            rand_train_sources_batch.extend(adapt_source)
+            rand_train_targets_batch.extend(adapt_target)
+
+            inc_adapt_sources = random.sample(rand_train_sources_batch, len(rand_train_sources_batch)) 
+            inc_adapt_targets = [rand_train_targets_batch[rand_train_sources_batch.index(u)] for u in inc_adapt_sources]
+
+            inc_adapt_source_filename = data_path + 'inc_adapt_epoch_{0}.source'.format(eidx)
+            inc_adapt_target_filename = data_path + 'inc_adapt_epoch_{0}.target'.format(eidx)
+
+            for utt in inc_adapt_sources:
+                f = open(inc_adapt_source_filename, 'w')
+                f.write(utt + '\n')
+                f.close()
+            for res in inc_adapt_targets:
+                f = open(inc_adapt_target_filename, 'w')
+                f.write(res + '\n')
+                f.close() 
+
+            # 2. swap in the new files to train each epoch
+            print 'Swapping in new data sets for next epoch of incremental adaptation ...'
+            train = TextIterator(source=inc_adapt_source_filename,
+                           target=inc_adapt_target_filename,
+                           source_dict=dictionaries[0],
+                           target_dict=dictionaries[1],
+                           n_words_source=n_words_src,
+                           n_words_target=n_words,
+                           source_word_level=source_word_level,
+                           target_word_level=target_word_level,
+                           batch_size=batch_size,
+                           sort_size=sort_size)
+
+            # 3. delete old source and target files if necessary 
+            #files_to_delete = [data_path + 'inc_adapt_epoch_{0}.source'.format(eidx - 1), data_path + 'inc_adapt_epoch_{0}.target'.format(eidx - 1)] 
+            #for old_file in files_to_delete:
+            #    os.remove(old_file) 
+
         time0 = time.time()
         n_samples = 0
         NaN_grad_cnt = 0
@@ -423,6 +484,11 @@ def train(
             if numpy.mod(uidx, dispFreq) == 0:
                 ud = time.time() - ud_start
                 wps = n_samples / float(time.time() - time0)
+                # TODO: write epoch, update, and cost to log file
+                cost_log = open(data_path + 'cost_log.txt', 'a')
+                cost_log.write(eidx + ', ' + uidx + ', ' + cost + '\n')
+                cost_log.close()  
+                
                 print 'Epoch ', eidx, 'Update ', uidx, 'Cost ', cost, 'NaN_in_grad', NaN_grad_cnt,\
                       'NaN_in_cost', NaN_cost_cnt, 'Gradient_clipped', clipped_cnt, 'UD ', ud, "%.2f sentences/s" % wps
                 ud_start = time.time()
@@ -593,6 +659,7 @@ def train(
         print 'Seen %d samples' % n_samples
         eidx += 1
 
+        # End of epoch...
         if estop:
             break
 
