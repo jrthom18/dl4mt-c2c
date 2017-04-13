@@ -6,6 +6,7 @@ import json
 import numpy 
 import random
 import nltk
+nltk.download('punkt')
 
 reload(sys)
 sys.setdefaultencoding('utf-8')
@@ -30,11 +31,11 @@ def generate_evaluation_data():
     rand_train_sources_batch = numpy.random.choice(train_sources, size=100, replace=False).tolist()
     rand_train_targets_batch = [train_targets[train_sources.index(u)] for u in rand_train_sources_batch]
     for utt in rand_train_sources_batch:
-        f = open(train_eval_source, 'w')
+        f = open(train_eval_source, 'a')
         f.write(utt + '\n')
         f.close()
     for res in rand_train_targets_batch:
-        f = open(train_eval_target, 'w')
+        f = open(train_eval_target, 'a')
         f.write(res + '\n')
         f.close()  
 
@@ -44,11 +45,11 @@ def generate_evaluation_data():
     rand_valid_sources_batch = numpy.random.choice(valid_sources, size=100, replace=False).tolist()
     rand_valid_targets_batch = [valid_targets[valid_sources.index(u)] for u in rand_valid_sources_batch]
     for utt in rand_valid_sources_batch:
-        f = open(valid_eval_source, 'w')
+        f = open(valid_eval_source, 'a')
         f.write(utt + '\n')
         f.close()
     for res in rand_valid_targets_batch:
-        f = open(valid_eval_target, 'w')
+        f = open(valid_eval_target, 'a')
         f.write(res + '\n')
         f.close() 
 
@@ -204,13 +205,18 @@ def main(model, dictionary, dictionary_target, sources, ground_truth, saveto, k=
                     correct_word_count += 1
 
         # Calculate % accuracy measurment 
-        accuracy = correct_word_count / float(len(ground_truth_words))
+        if len(ground_truth_words) > 0:
+            accuracy = correct_word_count / float(len(ground_truth_words))
+        else:
+            accuracy = 0
         return accuracy * 100
 
 
     #TODO: Loop thru source files
     file_iterator = 0
-    accuracy_scores = []
+    training_accuracy_scores = []
+    validation_accuracy_scores = []
+
     for source_file in sources:
         print 'Translating ', source_file, '...'
         n_samples = _send_jobs(source_file)
@@ -220,27 +226,44 @@ def main(model, dictionary, dictionary_target, sources, ground_truth, saveto, k=
         trans = _seqs2words(_retrieve_jobs(n_samples, silent))
         print "translations retrieved"
 
+        sf = open(source_file)
+        sflines = sf.readlines()
+        gtf = open(ground_truth[file_iterator])
+        gtflines = gtf.readlines()
+
         # TODO: Write evaluations of training and validation set random samples
-        with open(saveto, 'w') as f:
+        with open(saveto, 'a') as f:
+            if file_iterator == 0:
+                f.write('TRAINING SET SAMPLES (SEEN):\n\n')
+
             for i in range(n_samples):
-                source_input = source_file[i]
-                ground_truth_response = ground_truth[file_iterator][i]
+                source_input = sflines[i]
+                ground_truth_response = gtflines[i]
                 lumen_response = trans[i].encode('utf-8')
                 
-                f.write('Utterance: {0}\n'.format(source_input))
-                f.write('Response:  {0}\n'.format(ground_truth_response))
+                f.write('Sample {0}'.format(i))
+                f.write('Utterance: {0}'.format(source_input))
+                f.write('Response:  {0}'.format(ground_truth_response))
                 f.write('Lumen:     {0}\n'.format(lumen_response))
-                #TODO: Measure word-for-word accuracy of responses to training set samples
+                #TODO: Measure word-for-word accuracy of responses to samples                
+                accuracy_percentage = _word_accuracy(ground_truth_response, lumen_response)
+                f.write('Word-for-word accuracy: {0} %\n'.format(accuracy_percentage))
+                
                 if file_iterator == 0:
-                    accuracy_percentage = _word_accuracy(ground_truth_response, lumen_response)
-                    f.write('Word-for-word accuracy: {0} %\n'.format(accuracy_percentage))
-                    accuracy_scores.append(accuracy_percentage)
+                    training_accuracy_scores.append(accuracy_percentage)
+                if file_iterator == 1:
+                    validation_accuracy_scores.append(accuracy_percentage)
 
                 f.write('---------------------------------------------------------------\n')
             
             if file_iterator == 0:
-                total_accuracy = sum(accuracy_scores) / float(len(accuracy_scores))
-                f.write('Total word-for-word accuracy: {0} %\n'.format(total_accuracy))
+                total_accuracy = sum(training_accuracy_scores) / float(len(training_accuracy_scores))
+                f.write('\n\n**********************\nTotal word-for-word accuracy: {0} %\n**********************\n\n'.format(total_accuracy))
+                f.write('VALIDATION SET SAMPLES (UNSEEN):\n\n')
+            else:
+                total_accuracy = sum(validation_accuracy_scores) / float(len(validation_accuracy_scores))
+                f.write('\n\n**********************\nTotal word-for-word accuracy: {0} %\n**********************\n\n'.format(total_accuracy))
+
 
         file_iterator += 1
         print "Done", saveto
