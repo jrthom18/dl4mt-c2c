@@ -10,7 +10,7 @@ from flask import Flask, request
 reload(sys)
 sys.setdefaultencoding('utf-8')
 
-sys.path.insert(0, "/home/jrthom18/data/char_model/dl4mt-c2c/char2char/") # change appropriately
+sys.path.insert(0, "/home/jrthom18/data/dl4mt-c2c/char2char/") # change appropriately
 
 import numpy
 import cPickle as pkl
@@ -244,7 +244,7 @@ class Translator(object):
 
 app = Flask(__name__)
 
-data_path = "/home/jrthom18/data/char_model/dl4mt-c2c/data/"
+data_path = "/home/jrthom18/data/dl4mt-c2c/data/"
 model = "models/bi-char2char.grads.194124.npz"
 char_base = model.split("/")[-1]
 dictionary = data_path + "train.source.124.pkl"          # change appropriately
@@ -335,7 +335,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    data_path = "/home/jrthom18/data/char_model/dl4mt-c2c/data/"       # change appropriately
+    data_path = "/home/jrthom18/data/dl4mt-c2c/data/"       # change appropriately
 
     '''
     '''

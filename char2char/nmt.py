@@ -352,7 +352,7 @@ def train(
                 print "Jumping [%d / %d] examples" % (cc, cidx)
             train.next()
 
-    data_path = "/home/jrthom18/data/char_model/dl4mt-c2c/data/"       # change appropriately
+    data_path = "/home/jrthom18/data/dl4mt-c2c/data/"       # change appropriately
 
     for epoch in xrange(max_epochs):
         # TODO: 
@@ -486,7 +486,7 @@ def train(
                 wps = n_samples / float(time.time() - time0)
                 # TODO: write epoch, update, and cost to log file
                 cost_log = open(data_path + 'cost_log.txt', 'a')
-                cost_log.write(eidx + ', ' + uidx + ', ' + cost + '\n')
+                cost_log.write('{0}\t{1}\t\t{2}\n'.format(eidx, uidx, cost))
                 cost_log.close()  
                 
                 print 'Epoch ', eidx, 'Update ', uidx, 'Cost ', cost, 'NaN_in_grad', NaN_grad_cnt,\

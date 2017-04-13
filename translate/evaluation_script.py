@@ -10,7 +10,8 @@ import nltk
 reload(sys)
 sys.setdefaultencoding('utf-8')
 
-sys.path.insert(0, "/home/jrthom18/data/char_model/dl4mt-c2c/char2char/") # change appropriately
+sys.path.insert(0, "/home/jrthom18/data/dl4mt-c2c/char2char/")  # change appropriately
+data_path = "/home/jrthom18/data/dl4mt-c2c/data/"               # change appropriately
 
 import numpy
 import cPickle as pkl
@@ -191,9 +192,9 @@ def main(model, dictionary, dictionary_target, sources, ground_truth, saveto, k=
         return trans
 
     #TODO: Measure word-for-word accuracy using NLTK tokenizer
-    def _word_accuracy(ground_truth, lumen_response):
-        ground_truth_words = nltk.word_tokenize(ground_truth)
-        lumen_response_words = nltk.word_tokenize(lumen_response)
+    def _word_accuracy(gt, lr):
+        ground_truth_words = nltk.word_tokenize(gt)
+        lumen_response_words = nltk.word_tokenize(lr)
         
         correct_word_count = 0
         
@@ -202,13 +203,14 @@ def main(model, dictionary, dictionary_target, sources, ground_truth, saveto, k=
                 if lumen_response_words[inc] == ground_truth_words[inc]:
                     correct_word_count += 1
 
-        # % accuracy measurment 
-        accuracy = correct_word_count / lumen_response_words
+        # Calculate % accuracy measurment 
+        accuracy = correct_word_count / float(len(ground_truth_words))
         return accuracy * 100
 
 
     #TODO: Loop thru source files
     file_iterator = 0
+    accuracy_scores = []
     for source_file in sources:
         print 'Translating ', source_file, '...'
         n_samples = _send_jobs(source_file)
@@ -222,16 +224,23 @@ def main(model, dictionary, dictionary_target, sources, ground_truth, saveto, k=
         with open(saveto, 'w') as f:
             for i in range(n_samples):
                 source_input = source_file[i]
-                ground_truth = ground_truth[file_iterator][i]
+                ground_truth_response = ground_truth[file_iterator][i]
                 lumen_response = trans[i].encode('utf-8')
                 
-                f.write(source_input + '\n')
-                f.write(ground_truth + '\n')
-                f.write(lumen_response + '\n')
+                f.write('Utterance: {0}\n'.format(source_input))
+                f.write('Response:  {0}\n'.format(ground_truth_response))
+                f.write('Lumen:     {0}\n'.format(lumen_response))
                 #TODO: Measure word-for-word accuracy of responses to training set samples
                 if file_iterator == 0:
-                    accuracy_percentage = _word_accuracy(ground_truth, lumen_response)
-                    f.write('Word-for-word accuracy: ' + accuracy_percentage + ' %\n')
+                    accuracy_percentage = _word_accuracy(ground_truth_response, lumen_response)
+                    f.write('Word-for-word accuracy: {0} %\n'.format(accuracy_percentage))
+                    accuracy_scores.append(accuracy_percentage)
+
+                f.write('---------------------------------------------------------------\n')
+            
+            if file_iterator == 0:
+                total_accuracy = sum(accuracy_scores) / float(len(accuracy_scores))
+                f.write('Total word-for-word accuracy: {0} %\n'.format(total_accuracy))
 
         file_iterator += 1
         print "Done", saveto
@@ -254,12 +263,10 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    data_path = "/home/jrthom18/data/char_model/dl4mt-c2c/data/"       # change appropriately
-
     char_base = args.model.split("/")[-1]
 
-    dictionary = data_path + "train.source.124.pkl"          # change appropriately
-    dictionary_target = data_path + "train.target.122.pkl"   # change appropriately
+    dictionary = data_path + "train.source.1004.pkl"          # change appropriately
+    dictionary_target = data_path + "train.target.1002.pkl"   # change appropriately
 
     eval_data = generate_evaluation_data()
     source = eval_data[0]
