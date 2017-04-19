@@ -19,6 +19,7 @@ import os
 import warnings
 import sys
 import time
+import random
 
 from collections import OrderedDict
 from mixer import *
@@ -207,7 +208,7 @@ def train(
         if cidx is None:
             cidx = 0
 
-    print 'Loading data'
+    print 'Loading data'    
     train = TextIterator(source=datasets[0],
                          target=datasets[1],
                          source_dict=dictionaries[0],
@@ -345,7 +346,7 @@ def train(
     ud_start = time.time()
     estop = False
 
-    if re_load:
+    if re_load and not incremental_adaptation_mode:
         print "Checkpointed minibatch number: %d" % cidx
         for cc in xrange(cidx):
             if numpy.mod(cc, 1000)==0:
@@ -367,7 +368,7 @@ def train(
             adapt_target = [line.rstrip('\n') for line in open(data_path + 'adapt.target')]
 
             adaptation_data_size = len(adapt_source)
-            original_data_size = round(6.142857 * adaptation_data_size)
+            original_data_size = int(round(6.142857 * adaptation_data_size))
             
             train_sources = [line.rstrip('\n') for line in open(data_path + 'train.source')]
             train_targets = [line.rstrip('\n') for line in open(data_path + 'train.target')]
@@ -385,13 +386,20 @@ def train(
             inc_adapt_target_filename = data_path + 'inc_adapt_epoch_{0}.target'.format(eidx)
 
             for utt in inc_adapt_sources:
-                f = open(inc_adapt_source_filename, 'w')
+                f = open(inc_adapt_source_filename, 'a')
                 f.write(utt + '\n')
                 f.close()
             for res in inc_adapt_targets:
-                f = open(inc_adapt_target_filename, 'w')
+                f = open(inc_adapt_target_filename, 'a')
                 f.write(res + '\n')
                 f.close() 
+
+            # TODO: Set certain parameters
+            batch_size = adaptation_data_size           # The number of adaptation samples?
+            max_epochs = int(adaptation_data_size / 2)  # The number of adaptation samples / 2 ?
+            saveFreq = 7    # End of each epoch
+            sampleFreq = 7  # End of each epoch
+            dispFreq = 1
 
             # 2. swap in the new files to train each epoch
             print 'Swapping in new data sets for next epoch of incremental adaptation ...'

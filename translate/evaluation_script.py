@@ -25,10 +25,10 @@ def generate_evaluation_data():
     train_eval_target = data_path + "train_eval.target"
     valid_eval_target = data_path + "valid_eval.target" 
 
-    #TODO: Randomly pull 100 utterances from train.source, pull the ground-truth responses from train.target write to train_eval.source and train_eval.target
+    #TODO: Randomly pull 200 utterances from train.source, pull the ground-truth responses from train.target write to train_eval.source and train_eval.target
     train_sources = [line.rstrip('\n') for line in open(data_path + 'train.source')]
     train_targets = [line.rstrip('\n') for line in open(data_path + 'train.target')]
-    rand_train_sources_batch = numpy.random.choice(train_sources, size=100, replace=False).tolist()
+    rand_train_sources_batch = numpy.random.choice(train_sources, size=200, replace=False).tolist()
     rand_train_targets_batch = [train_targets[train_sources.index(u)] for u in rand_train_sources_batch]
     for utt in rand_train_sources_batch:
         f = open(train_eval_source, 'a')
@@ -39,10 +39,10 @@ def generate_evaluation_data():
         f.write(res + '\n')
         f.close()  
 
-    #TODO: Randomly pull 100 utterances from valid.source, pull the ground-truth responses from valid.target write to valid_eval.source and valid_eval.target
+    #TODO: Randomly pull 200 utterances from valid.source, pull the ground-truth responses from valid.target write to valid_eval.source and valid_eval.target
     valid_sources = [line.rstrip('\n') for line in open(data_path + 'valid.source')]
     valid_targets = [line.rstrip('\n') for line in open(data_path + 'valid.target')]
-    rand_valid_sources_batch = numpy.random.choice(valid_sources, size=100, replace=False).tolist()
+    rand_valid_sources_batch = numpy.random.choice(valid_sources, size=200, replace=False).tolist()
     rand_valid_targets_batch = [valid_targets[valid_sources.index(u)] for u in rand_valid_sources_batch]
     for utt in rand_valid_sources_batch:
         f = open(valid_eval_source, 'a')
@@ -241,7 +241,7 @@ def main(model, dictionary, dictionary_target, sources, ground_truth, saveto, k=
                 ground_truth_response = gtflines[i]
                 lumen_response = trans[i].encode('utf-8')
                 
-                f.write('Sample {0}'.format(i))
+                f.write('Sample {0}\n'.format(i+1))
                 f.write('Utterance: {0}'.format(source_input))
                 f.write('Response:  {0}'.format(ground_truth_response))
                 f.write('Lumen:     {0}\n'.format(lumen_response))
@@ -258,11 +258,11 @@ def main(model, dictionary, dictionary_target, sources, ground_truth, saveto, k=
             
             if file_iterator == 0:
                 total_accuracy = sum(training_accuracy_scores) / float(len(training_accuracy_scores))
-                f.write('\n\n**********************\nTotal word-for-word accuracy: {0} %\n**********************\n\n'.format(total_accuracy))
+                f.write('\n\n**********************\nTotal training set word-for-word accuracy: {0} %\n**********************\n\n'.format(total_accuracy))
                 f.write('VALIDATION SET SAMPLES (UNSEEN):\n\n')
             else:
                 total_accuracy = sum(validation_accuracy_scores) / float(len(validation_accuracy_scores))
-                f.write('\n\n**********************\nTotal word-for-word accuracy: {0} %\n**********************\n\n'.format(total_accuracy))
+                f.write('\n\n**********************\nTotal validation set word-for-word accuracy: {0} %\n**********************\n\n'.format(total_accuracy))
 
 
         file_iterator += 1

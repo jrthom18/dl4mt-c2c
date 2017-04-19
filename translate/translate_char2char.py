@@ -275,24 +275,28 @@ def verify():
 def webhook():
     # endpoint for processing incoming messaging events
 
-    # This code works with FB Messenger but nothing else apparently...
-    #data = request.get_json()
+    # This code works with FB Messenger and Salesforce 
+    data = request.get_json()
     #log(data)  # you may not want to log every incoming message in production, but it's good for testing
-    #message_text = data["message_text"]
+    message_text = data["message_text"]
 
-    message_text = request.form["message_text"]
+    # Sometimes this code works instead...?
+    #message_text = request.form["message_text"]
     message = translator.translate(message_text)
+
     #post_bot_response(message)
     #return "ok", 200
     # return bot response here for salesforce
     return message, 200
 
-@app.route('/adaptations', methods=['POST'])
+@app.route('/adaptations/', methods=['POST'])
 def post_incremental_adaptation_data():
     # endpoint for processing incremental adaptation data
+    data = request.get_json()
+    source = data["source"]
+    target = data["target"]
 
-    source = request.form["source"]
-    target = request.form["target"]
+    log('Writing new data to adaptation files...')
 
     adapt_source_file = data_path + 'adapt.source'
     adapt_target_file = data_path + 'adapt.target'
